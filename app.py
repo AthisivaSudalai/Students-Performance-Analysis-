@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 from datetime import timedelta, datetime, timezone
 import os
+import tempfile
 from werkzeug.utils import secure_filename
 from data_processor import DataProcessor
 from xhtml2pdf import pisa
@@ -9,19 +10,27 @@ import base64
 
 app = Flask(__name__)
 app.secret_key = 'spas-secret-key-2026'
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+
+# Use /tmp on Vercel (read-only filesystem), local dirs otherwise
+IS_VERCEL = bool(os.environ.get('VERCEL'))
+BASE_TMP  = tempfile.gettempdir()
+
+UPLOAD_FOLDER = os.path.join(BASE_TMP, 'uploads')       if IS_VERCEL else 'uploads'
+CHARTS_FOLDER = os.path.join(BASE_TMP, 'static_charts') if IS_VERCEL else 'static/charts'
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['ALLOWED_EXTENSIONS'] = {'csv', 'xlsx'}
 
 # ── Session security config ───────────────────────────────────────────────────
-app.config['SESSION_COOKIE_HTTPONLY'] = True   # JS cannot access the cookie
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)  # idle timeout
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
 
-SESSION_TIMEOUT_MINUTES = 30  # inactivity timeout
+SESSION_TIMEOUT_MINUTES = 30
 
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs('static/charts', exist_ok=True)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(CHARTS_FOLDER, exist_ok=True)
 
 USERS = {
     'staff': 'password123',
@@ -140,7 +149,7 @@ def upload():
 
             processor.load_data()
             analysis = processor.analyze_data()
-            processor.generate_visualizations()
+            processor.generate_visualizations(CHARTS_FOLDER)
 
             session['analysis'] = analysis
             session['filename'] = filename
@@ -168,17 +177,34 @@ def dashboard():
     filename = session.get('filename', '')
     login_time = session.get('login_time', '')
 
+    # Build chart URLs — base64 on Vercel (no static folder), normal URLs locally
+    if IS_VERCEL:
+        chart_urls = {k: chart_to_base64(v) for k, v in {
+            'histogram': 'histogram.png', 'bar_chart': 'bar_chart.png',
+            'line_chart': 'line_chart.png', 'pie_chart': 'pie_chart.png',
+            'performers': 'performers.png'
+        }.items()}
+    else:
+        chart_urls = {
+            'histogram':  url_for('static', filename='charts/histogram.png'),
+            'bar_chart':  url_for('static', filename='charts/bar_chart.png'),
+            'line_chart': url_for('static', filename='charts/line_chart.png'),
+            'pie_chart':  url_for('static', filename='charts/pie_chart.png'),
+            'performers': url_for('static', filename='charts/performers.png'),
+        }
+
     return render_template('dashboard.html',
                            analysis=analysis,
                            filename=filename,
                            username=session['username'],
-                           login_time=login_time)
+                           login_time=login_time,
+                           chart_urls=chart_urls)
 
 # ── PDF Download ──────────────────────────────────────────────────────────────
 
 def chart_to_base64(filename):
     """Read a chart PNG and return a base64 data URI for embedding in PDF HTML."""
-    path = os.path.join('static', 'charts', filename)
+    path = os.path.join(CHARTS_FOLDER, filename)
     if not os.path.exists(path):
         return ''
     with open(path, 'rb') as f:
@@ -224,4 +250,5 @@ def download_pdf():
     return response
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)

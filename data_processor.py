@@ -134,16 +134,20 @@ class DataProcessor:
 
         return analysis
     
-    def generate_visualizations(self):
+    def generate_visualizations(self, charts_dir='static/charts'):
         """Generate all required charts"""
+        import os
+        os.makedirs(charts_dir, exist_ok=True)
+
+        def save(name):
+            return os.path.join(charts_dir, name)
+
         # Set style
         sns.set_style("whitegrid")
         plt.rcParams['figure.figsize'] = (10, 6)
-        
-        # Clear any existing plots
         plt.close('all')
-        
-        # 1. Histogram - Marks distribution for each test
+
+        # 1. Histogram
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
         for idx, test in enumerate(['Test1', 'Test2', 'Test3']):
             axes[idx].hist(self.df[test], bins=10, color='skyblue', edgecolor='black')
@@ -151,9 +155,9 @@ class DataProcessor:
             axes[idx].set_xlabel('Marks')
             axes[idx].set_ylabel('Frequency')
         plt.tight_layout()
-        plt.savefig('static/charts/histogram.png', dpi=100, bbox_inches='tight')
+        plt.savefig(save('histogram.png'), dpi=100, bbox_inches='tight')
         plt.close()
-        
+
         # 2. Bar chart - Average marks per test
         plt.figure(figsize=(10, 6))
         averages = [self.df['Test1'].mean(), self.df['Test2'].mean(), self.df['Test3'].mean()]
@@ -163,23 +167,19 @@ class DataProcessor:
         plt.xlabel('Test', fontsize=12)
         plt.ylabel('Average Marks', fontsize=12)
         plt.ylim(0, 50)
-        
-        # Add value labels on bars
         for bar in bars:
             height = bar.get_height()
             plt.text(bar.get_x() + bar.get_width()/2., height,
-                    f'{height:.2f}',
-                    ha='center', va='bottom', fontsize=10)
-        
-        plt.savefig('static/charts/bar_chart.png', dpi=100, bbox_inches='tight')
+                    f'{height:.2f}', ha='center', va='bottom', fontsize=10)
+        plt.savefig(save('bar_chart.png'), dpi=100, bbox_inches='tight')
         plt.close()
-        
-        # 3. Line chart - Student progress (top 10 students)
+
+        # 3. Line chart - Student progress (top 10)
         plt.figure(figsize=(12, 6))
         top_10 = self.df.nlargest(10, 'Total')
         for idx, row in top_10.iterrows():
-            plt.plot(['Test 1', 'Test 2', 'Test 3'], 
-                    [row['Test1'], row['Test2'], row['Test3']], 
+            plt.plot(['Test 1', 'Test 2', 'Test 3'],
+                    [row['Test1'], row['Test2'], row['Test3']],
                     marker='o', label=row['Name'])
         plt.title('Student Progress (Top 10)', fontsize=16, fontweight='bold')
         plt.xlabel('Test', fontsize=12)
@@ -187,9 +187,9 @@ class DataProcessor:
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.savefig('static/charts/line_chart.png', dpi=100, bbox_inches='tight')
+        plt.savefig(save('line_chart.png'), dpi=100, bbox_inches='tight')
         plt.close()
-        
+
         # 4. Pie chart - Pass vs Fail
         plt.figure(figsize=(8, 8))
         status_counts = self.df['Status'].value_counts()
@@ -199,26 +199,21 @@ class DataProcessor:
         plt.pie(status_counts.values, labels=status_counts.index, autopct='%1.1f%%',
                 colors=colors, explode=explode, shadow=True, startangle=90)
         plt.title('Pass vs Fail Distribution', fontsize=16, fontweight='bold')
-        plt.savefig('static/charts/pie_chart.png', dpi=100, bbox_inches='tight')
+        plt.savefig(save('pie_chart.png'), dpi=100, bbox_inches='tight')
         plt.close()
-        
-        # 5. Bar chart - Top/Bottom performers
+
+        # 5. Top/Bottom performers
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-        
-        # Top 5 performers
         top_5 = self.df.nlargest(5, 'Total')
         ax1.barh(top_5['Name'], top_5['Total'], color='#2ECC71')
         ax1.set_title('Top 5 Performers', fontsize=14, fontweight='bold')
         ax1.set_xlabel('Total Marks', fontsize=12)
         ax1.invert_yaxis()
-        
-        # Bottom 5 performers
         bottom_5 = self.df.nsmallest(5, 'Total')
         ax2.barh(bottom_5['Name'], bottom_5['Total'], color='#E74C3C')
         ax2.set_title('Bottom 5 Performers', fontsize=14, fontweight='bold')
         ax2.set_xlabel('Total Marks', fontsize=12)
         ax2.invert_yaxis()
-        
         plt.tight_layout()
-        plt.savefig('static/charts/performers.png', dpi=100, bbox_inches='tight')
+        plt.savefig(save('performers.png'), dpi=100, bbox_inches='tight')
         plt.close()
