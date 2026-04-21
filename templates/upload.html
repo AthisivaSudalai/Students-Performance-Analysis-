@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Student Data – EduMetrics</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f4f5f7;
+            color: #222;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Navbar ── */
+        .navbar {
+            background: #fff;
+            border-bottom: 1px solid #e2e5eb;
+            padding: 0 36px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+        }
+        .navbar .brand {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #3a5bd9;
+            text-decoration: none;
+            letter-spacing: -0.3px;
+        }
+
+        /* ── Page body ── */
+        .page {
+            max-width: 920px;
+            margin: 0 auto;
+            padding: 48px 24px 60px;
+            width: 100%;
+        }
+
+        /* ── Page heading ── */
+        .page-heading h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .page-heading p {
+            font-size: 0.92rem;
+            color: #666;
+            line-height: 1.65;
+            max-width: 540px;
+            margin-bottom: 28px;
+        }
+
+        /* ── Alert ── */
+        .alert {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+        .alert.error {
+            background: #fdecea;
+            color: #c0392b;
+            border: 1px solid #f5c6cb;
+        }
+        .alert.success {
+            background: #e8f5e9;
+            color: #1e7e34;
+            border: 1px solid #c3e6cb;
+        }
+        .alert .alert-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+        .alert.error .alert-icon {
+            background: #e74c3c;
+            color: #fff;
+        }
+        .alert.success .alert-icon {
+            background: #27ae60;
+            color: #fff;
+        }
+
+        /* ── Drop zone ── */
+        .drop-zone {
+            background: #fff;
+            border: 1.5px dashed #c8cdd8;
+            border-radius: 10px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+            margin-bottom: 24px;
+        }
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: #3a5bd9;
+            background: #f0f3ff;
+        }
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .dz-folder-icon {
+            width: 56px;
+            height: 56px;
+            background: #e8ecf8;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .dz-folder-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: #3a5bd9;
+        }
+
+        .drop-zone h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 6px;
+        }
+
+        .drop-zone .formats {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #aaa;
+        }
+
+        .file-chosen {
+            display: none;
+            margin-top: 14px;
+            padding: 10px 16px;
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            border-radius: 6px;
+            color: #2e7d32;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        /* ── Analyse button ── */
+        .btn-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 40px;
+        }
+
+        button[type="submit"] {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            background: #3a5bd9;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        button[type="submit"]:hover { background: #2f4ec4; transform: translateY(-1px); }
+        button[type="submit"] svg {
+            width: 18px;
+            height: 18px;
+            fill: #fff;
+        }
+
+        /* ── Bottom two-column layout ── */
+        .bottom-row {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 28px;
+            align-items: start;
+        }
+        @media (max-width: 700px) {
+            .bottom-row { grid-template-columns: 1fr; }
+        }
+
+        /* ── Required file format table ── */
+        .format-section .label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #3a5bd9;
+            margin-bottom: 14px;
+        }
+
+        .format-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e2e5eb;
+        }
+
+        .format-table thead th {
+            background: #f4f5f7;
+            color: #444;
+            font-weight: 700;
+            padding: 11px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e2e5eb;
+            font-size: 0.85rem;
+        }
+
+        .format-table tbody td {
+            padding: 10px 16px;
+            color: #444;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .format-table tbody tr:last-child td { border-bottom: none; }
+
+        /* ── Validation rules card ── */
+        .validation-card {
+            background: #f9fafc;
+            border: 1px solid #e2e5eb;
+            border-radius: 10px;
+            padding: 22px 20px;
+        }
+
+        .validation-card .label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 16px;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 14px;
+            font-size: 0.85rem;
+            color: #444;
+            line-height: 1.5;
+        }
+        .rule-item:last-child { margin-bottom: 0; }
+
+        .rule-check {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3a5bd9;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1px;
+        }
+        .rule-check svg {
+            width: 10px;
+            height: 10px;
+            fill: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar"     >
+        <a href="#" class="brand" >EduMetrics</a>
+    </nav>
+
+    <!-- ── Page ── -->
+    <div class="page">
+
+        <!-- Heading -->
+        <div class="page-heading">
+            <h1>Upload Student Data</h1>
+            <p>Securely import academic performance records into the EduMetrics archival system. Ensure your file adheres to the schema guidelines below for accurate curricular analysis.</p>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="alert {{ category }}">
+                    <span class="alert-icon">{{ '!' if category == 'error' else '✓' }}</span>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endwith %}
+
+        <!-- Upload form -->
+        <form method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data" id="uploadForm">
+
+            <div class="drop-zone" id="dropZone">
+                <input type="file" name="file" id="fileInput" accept=".csv,.xlsx">
+                <div class="dz-folder-icon">
+                    <!-- folder icon -->
+                    <svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>
+                </div>
+                <h3>Click to browse or drag &amp; drop</h3>
+                <p class="formats">Supported Formats: .CSV, .XLSX</p>
+            </div>
+
+            <div class="file-chosen" id="fileChosen">
+                ✅ &nbsp;<strong id="chosenName"></strong>&nbsp; selected — ready to analyse
+            </div>
+
+            <div class="btn-row">
+                <button type="submit">
+                    Analyse Performance
+                    <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+                </button>
+            </div>
+
+        </form>
+
+        <!-- Bottom: format table + validation rules -->
+        <div class="bottom-row">
+
+            <!-- Required file format -->
+            <div class="format-section">
+                <div class="label">Required File Format</div>
+                <table class="format-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Test1</th>
+                            <th>Test2</th>
+                            <th>Test3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Alice</td><td>85</td><td>92</td><td>88</td></tr>
+                        <tr><td>Bob</td><td>76</td><td>81</td><td>74</td></tr>
+                        <tr><td>Charlie</td><td>95</td><td>89</td><td>91</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Validation rules -->
+            <div class="validation-card">
+                <div class="label">Validation Rules</div>
+
+                <div class="rule-item">
+                    <span class="rule-check">
+                        <svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    Column names must be exact (Name, Test1, Test2, Test3).
+                </div>
+                <div class="rule-item">
+                    <span class="rule-check">
+                        <svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    All marks must be numerical values between 0–50.
+                </div>
+                <div class="rule-item">
+                    <span class="rule-check">
+                        <svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    Student names must not contain special characters.
+                </div>
+                <div class="rule-item">
+                    <span class="rule-check">
+                        <svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    Missing values will be treated as zero (0).
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const input    = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const chosen   = document.getElementById('fileChosen');
+        const name     = document.getElementById('chosenName');
+
+        function showChosen(filename) {
+            name.textContent = filename;
+            chosen.style.display = 'block';
+        }
+
+        input.addEventListener('change', () => {
+            if (input.files[0]) showChosen(input.files[0].name);
+        });
+
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) {
+                input.files = e.dataTransfer.files;
+                showChosen(e.dataTransfer.files[0].name);
+            }
+        });
+    </script>
+
+</body>
+</html>

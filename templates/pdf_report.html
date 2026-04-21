@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SPAS Performance Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            color: #222;
+            background: #fff;
+            width: 100%;
+        }
+
+        /* ── Header ── */
+        .header {
+            color: #010000;
+            padding: 20px 28px 20px 28px;
+            margin-bottom: 20px;
+            display: block;
+            width: 100%;
+        }
+        .header h1 {
+            font-size: 18pt;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .header p {
+            font-size: 9pt;
+            opacity: 0.85;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .header .meta {
+            font-size: 8.5pt;
+            opacity: 0.8;
+            display: block;
+        }
+
+        /* ── Content wrapper ── */
+        .content {
+            padding: 0 24px;
+        }
+
+        /* ── Section title ── */
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #3a5bd9;
+            border-bottom: 1.5px solid #d0d8f8;
+            padding-bottom: 5px;
+            margin: 18px 0 12px;
+        }
+
+        /* ── Summary stat boxes ── */
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+        }
+        .stats-table td {
+            width: 25%;
+            border: 1px solid #e0e4f0;
+            padding: 14px 10px;
+            text-align: center;
+            vertical-align: middle;
+            background: #f8f9ff;
+        }
+        .stats-table .val {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #3a5bd9;
+            display: block;
+            line-height: 1.2;
+        }
+        .stats-table .val.green  { color: #27ae60; }
+        .stats-table .val.red    { color: #e74c3c; }
+        .stats-table .val.orange { color: #f39c12; }
+        .stats-table .lbl {
+            font-size: 8pt;
+            color: #888;
+            margin-top: 5px;
+            display: block;
+        }
+
+        /* ── Test cards — true 3-column table layout ── */
+        .test-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+            table-layout: fixed;
+        }
+        .test-table > tbody > tr > td {
+            width: 33%;
+            vertical-align: top;
+            padding: 0 10px;      /* ← FIX: equal padding both sides */
+        }
+        .test-table > tbody > tr > td:first-child {
+            padding-left: 0;      /* ← keeps left edge flush */
+        }
+        .test-table > tbody > tr > td:last-child {
+            padding-right: 0;     /* ← keeps right edge flush */
+        }
+        .test-card {
+            border: 1px solid #e0e4f0;
+            border-left: 4px solid #3a5bd9;
+            padding: 12px 14px;
+            background: #fafbff;
+        }
+        .test-card.t1 { border-left-color: #FF6B6B; }
+        .test-card.t2 { border-left-color: #4ECDC4; }
+        .test-card.t3 { border-left-color: #45B7D1; }
+        .test-card h4 {
+            font-size: 10pt;
+            margin-bottom: 10px;
+            color: #333;
+            font-weight: bold;
+        }
+        .test-row {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin-bottom: 0;
+        }
+        .test-row tr {
+            border-bottom: 1px solid #eee;
+        }
+        .test-row tr:last-child {
+            border-bottom: none;
+        }
+        .test-row td {
+            padding: 5px 0;
+            vertical-align: middle;
+        }
+        .test-row td.k { color: #888; width: 60%; }
+        .test-row td.v { font-weight: bold; text-align: right; width: 40%; }
+
+        /* ── Progress cards ── */
+        .prog-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+            table-layout: fixed;
+        }
+        .prog-table > tbody > tr > td {
+            width: 33%;
+            padding: 0 8px 0 0;
+            vertical-align: top;
+        }
+        .prog-table > tbody > tr > td:last-child {
+            padding-right: 0;
+        }
+        .prog-card {
+            padding: 14px 12px;
+            text-align: center;
+            border: 1px solid #e0e4f0;
+        }
+        .prog-card.up   { background: #e8f8f0; }
+        .prog-card.down { background: #fdecea; }
+        .prog-card.flat { background: #fef9e7; }
+        .prog-card .num {
+            font-size: 22pt;
+            font-weight: bold;
+            display: block;
+            line-height: 1.2;
+        }
+        .prog-card.up   .num { color: #1e8449; }
+        .prog-card.down .num { color: #c0392b; }
+        .prog-card.flat .num { color: #b7770d; }
+        .prog-card .lbl {
+            font-size: 8.5pt;
+            margin-top: 6px;
+            display: block;
+            color: #555;
+        }
+
+        /* ── Data tables ── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            margin-bottom: 18px;
+            table-layout: fixed;
+        }
+        .data-table thead th {
+            background: #3a5bd9;
+            color: #fff;
+            padding: 8px 8px;
+            text-align: left;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        /* Fixed column widths so table never overflows */
+        .data-table th:nth-child(1) { width: 7%; }
+        .data-table th:nth-child(2) { width: 22%; }
+        .data-table th:nth-child(3),
+        .data-table th:nth-child(4),
+        .data-table th:nth-child(5) { width: 9%; }
+        .data-table th:nth-child(6) { width: 9%; }
+        .data-table th:nth-child(7) { width: 11%; }
+        .data-table th:nth-child(8) { width: 10%; }
+
+        .data-table tbody td {
+            padding: 7px 8px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .data-table tbody tr:nth-child(even) td { background: #f8f9ff; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        .badge-pass { background: #d4edda; color: #155724; }
+        .badge-fail { background: #f8d7da; color: #721c24; }
+
+        /* ── Charts ── */
+        .chart-outer {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 8px;
+            margin-bottom: 8px;
+            table-layout: fixed;
+        }
+        .chart-outer > tbody > tr > td {
+            width: 50%;
+            vertical-align: top;
+            padding: 0;
+        }
+        .chart-box {
+            border: 1px solid #e0e4f0;
+            padding: 10px;
+            background: #fafbff;
+            text-align: center;
+        }
+        .chart-box h4 {
+            font-size: 8.5pt;
+            color: #3a5bd9;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .chart-box img { width: 100%; display: block; }
+
+        .chart-full {
+            width: 100%;
+            border: 1px solid #e0e4f0;
+            padding: 10px;
+            background: #fafbff;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .chart-full h4 {
+            font-size: 8.5pt;
+            color: #3a5bd9;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .chart-full img { width: 100%; display: block; }
+
+        /* ── Footer ── */
+        .footer {
+            margin-top: 24px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e4f0;
+            font-size: 8pt;
+            color: #aaa;
+            text-align: center;
+        }
+
+        /* ── Page break — avoid black bar ── */
+        .page-break {
+            display: block;
+            height: 0;
+            page-break-before: always;
+            border: none;
+            background: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header: all content inside one div, no child elements go full-width -->
+<div class="header">
+    <h1>&#128202; Student Performance Report</h1>
+    <p>EduMetrics – Student Performance Analysis System</p>
+    <span class="meta">File: {{ filename }} &nbsp;|&nbsp; Generated by: {{ username }}</span>
+</div>
+
+<div class="content">
+
+    <!-- 1. Summary -->
+    <div class="section-title">Summary Overview</div>
+    <table class="stats-table">
+        <tbody>
+            <tr>
+                <td>
+                    <span class="val">{{ analysis.cumulative.total_students }}</span>
+                    <span class="lbl">Total Students</span>
+                </td>
+                <td>
+                    <span class="val orange">{{ analysis.cumulative.overall_average }}</span>
+                    <span class="lbl">Overall Average</span>
+                </td>
+                <td>
+                    <span class="val green">{{ analysis.cumulative.overall_pass_percentage }}%</span>
+                    <span class="lbl">Pass Rate</span>
+                </td>
+                <td>
+                    <span class="val red">{{ analysis.cumulative.overall_fail_percentage }}%</span>
+                    <span class="lbl">Fail Rate</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 2. Test-wise Analysis -->
+    <div class="section-title">Test-wise Analysis</div>
+    <table class="test-table">
+        <tbody>
+            <tr>
+                <td>
+                    <div class="test-card t1">
+                        <h4>Test 1</h4>
+                        <table class="test-row">
+                            <tr><td class="k">Average</td><td class="v">{{ analysis.Test1.average }}</td></tr>
+                            <tr><td class="k">Highest</td><td class="v">{{ analysis.Test1.highest }}</td></tr>
+                            <tr><td class="k">Lowest</td> <td class="v">{{ analysis.Test1.lowest }}</td></tr>
+                            <tr><td class="k">Pass %</td> <td class="v">{{ analysis.Test1.pass_percentage }}%</td></tr>
+                        </table>
+                    </div>
+                </td>
+                <td>
+                    <div class="test-card t2">
+                        <h4>Test 2</h4>
+                        <table class="test-row">
+                            <tr><td class="k">Average</td><td class="v">{{ analysis.Test2.average }}</td></tr>
+                            <tr><td class="k">Highest</td><td class="v">{{ analysis.Test2.highest }}</td></tr>
+                            <tr><td class="k">Lowest</td> <td class="v">{{ analysis.Test2.lowest }}</td></tr>
+                            <tr><td class="k">Pass %</td> <td class="v">{{ analysis.Test2.pass_percentage }}%</td></tr>
+                        </table>
+                    </div>
+                </td>
+                <td>
+                    <div class="test-card t3">
+                        <h4>Test 3</h4>
+                        <table class="test-row">
+                            <tr><td class="k">Average</td><td class="v">{{ analysis.Test3.average }}</td></tr>
+                            <tr><td class="k">Highest</td><td class="v">{{ analysis.Test3.highest }}</td></tr>
+                            <tr><td class="k">Lowest</td> <td class="v">{{ analysis.Test3.lowest }}</td></tr>
+                            <tr><td class="k">Pass %</td> <td class="v">{{ analysis.Test3.pass_percentage }}%</td></tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 3. Progress -->
+    <div class="section-title">Progress Tracking (Test 1 &#8594; Test 3)</div>
+    <table class="prog-table">
+        <tbody>
+            <tr>
+                <td>
+                    <div class="prog-card up">
+                        <span class="num">{{ analysis.progress.improving_count }}</span>
+                        <span class="lbl">Improving</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="prog-card down">
+                        <span class="num">{{ analysis.progress.declining_count }}</span>
+                        <span class="lbl">Declining</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="prog-card flat">
+                        <span class="num">{{ analysis.progress.stable_count }}</span>
+                        <span class="lbl">Stable</span>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 4. Top Performers -->
+    <div class="section-title">Top Performers</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Rank</th><th>Name</th><th>Test 1</th><th>Test 2</th>
+                <th>Test 3</th><th>Total</th><th>Average</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in analysis.top_performers %}
+            <tr>
+                <td>{{ s.Rank }}</td>
+                <td><strong>{{ s.Name }}</strong></td>
+                <td>{{ s.Test1 }}</td><td>{{ s.Test2 }}</td><td>{{ s.Test3 }}</td>
+                <td><strong>{{ s.Total }}</strong></td>
+                <td>{{ "%.1f"|format(s.Average) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 5. Students Needing Attention -->
+     <br>
+    <div class="section-title">Students Needing Attention</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Rank</th><th>Name</th><th>Test 1</th><th>Test 2</th>
+                <th>Test 3</th><th>Total</th><th>Average</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in analysis.bottom_performers %}
+            <tr>
+                <td>{{ s.Rank }}</td>
+                <td><strong>{{ s.Name }}</strong></td>
+                <td>{{ s.Test1 }}</td><td>{{ s.Test2 }}</td><td>{{ s.Test3 }}</td>
+                <td><strong>{{ s.Total }}</strong></td>
+                <td>{{ "%.1f"|format(s.Average) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 6. Top 5 by Best-2 Average -->
+    <div class="section-title">Top 5 — Best 2 of 3 Tests (Highest Average)</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th><th>Test 1</th><th>Test 2</th><th>Test 3</th><th>Best 2 Avg</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in analysis.top_best2 %}
+            <tr>
+                <td><strong>{{ s.Name }}</strong></td>
+                <td>{{ s.Test1 }}</td><td>{{ s.Test2 }}</td><td>{{ s.Test3 }}</td>
+                <td><strong>{{ s.Best2Avg }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 7. Bottom 5 by Best-2 Average -->
+    <div class="section-title">Bottom 5 — Best 2 of 3 Tests (Lowest Average)</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th><th>Test 1</th><th>Test 2</th><th>Test 3</th><th>Best 2 Avg</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in analysis.bottom_best2 %}
+            <tr>
+                <td><strong>{{ s.Name }}</strong></td>
+                <td>{{ s.Test1 }}</td><td>{{ s.Test2 }}</td><td>{{ s.Test3 }}</td>
+                <td><strong>{{ s.Best2Avg }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- 8. Charts -->
+    <div class="page-break"></div>
+    <div class="section-title">Visual Reports</div>
+
+    <table class="chart-outer">
+        <tbody>
+            <tr>
+                <td>
+                    <div class="chart-box">
+                        <h4>Marks Distribution (Histogram)</h4>
+                        {% if charts.histogram %}<img src="{{ charts.histogram }}" alt="Histogram">{% endif %}
+                    </div>
+                </td>
+                <td>
+                    <div class="chart-box">
+                        <h4>Average Marks per Test</h4>
+                        {% if charts.bar_chart %}<img src="{{ charts.bar_chart }}" alt="Bar Chart">{% endif %}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding-top: 8px;">
+                    <div class="chart-box">
+                        <h4>Student Progress (Top 10)</h4>
+                        {% if charts.line_chart %}<img src="{{ charts.line_chart }}" alt="Line Chart">{% endif %}
+                    </div>
+                </td>
+                <td style="padding-top: 8px;">
+                    <div class="chart-box">
+                        <h4>Pass vs Fail Distribution</h4>
+                        {% if charts.pie_chart %}<img src="{{ charts.pie_chart }}" alt="Pie Chart">{% endif %}
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="chart-full">
+        <h4>Top 5 vs Bottom 5 Performers</h4>
+        {% if charts.performers %}<img src="{{ charts.performers }}" alt="Performers">{% endif %}
+    </div>
+
+    <!-- Footer -->
+    <!-- <div class="footer">
+        EduMetrics Analytics &nbsp;|&nbsp; Student Performance Analysis System &nbsp;|&nbsp; {{ filename }}
+    </div> -->
+
+</div><!-- /content -->
+</body>
+</html>
