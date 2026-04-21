@@ -64,18 +64,40 @@ def touch_session():
     session['last_active'] = datetime.now(timezone.utc).isoformat()
     session.modified = True
 
+def require_login(f):
+    """Decorator to require login for specific routes."""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_session_valid():
+            flash('You must be logged in to access this page.', 'error')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # ── Before every request ─────────────────────────────────────────────────────
 
 @app.before_request
 def check_session():
     """Enforce inactivity timeout on every request to protected routes."""
     protected = {'upload', 'dashboard', 'download_pdf'}
-    if request.endpoint in protected:
-        if 'username' in session and not is_session_valid():
+    
+    # Allow access to login, logout, and static files without authentication
+    if request.endpoint in {'login', 'logout', 'static'} or request.endpoint is None:
+        return
+    
+    # For all other routes, enforce authentication
+    if request.endpoint in protected or request.endpoint not in {'login', 'logout'}:
+        if 'username' not in session:
+            flash('Please log in to access this page.', 'warning')
+            return redirect(url_for('login'))
+        
+        if not is_session_valid():
             flash('Your session expired due to inactivity. Please log in again.', 'error')
             return redirect(url_for('login'))
-        if is_session_valid():
-            touch_session()
+        
+        # Refresh session activity
+        touch_session()
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -124,8 +146,11 @@ def logout():
 # ── Upload ────────────────────────────────────────────────────────────────────
 
 @app.route('/upload', methods=['GET', 'POST'])
+@require_login
 def upload():
+    # Double-check authentication (belt and suspenders approach)
     if not is_session_valid():
+        flash('Authentication required. Please log in first.', 'error')
         return redirect(url_for('login'))
 
     if request.method == 'POST':
@@ -157,6 +182,7 @@ def upload():
 
             session['analysis'] = analysis
             session['filename'] = filename
+            flash(f'File "{filename}" uploaded and analyzed successfully!', 'success')
             return redirect(url_for('dashboard'))
 
         except Exception as e:
@@ -165,16 +191,15 @@ def upload():
             flash(f'Error processing file: {str(e)}', 'error')
             return redirect(request.url)
 
-    return render_template('upload.html')
+    return render_template('upload.html', username=session.get('username', ''))
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 @app.route('/dashboard')
+@require_login
 def dashboard():
-    if not is_session_valid():
-        return redirect(url_for('login'))
     if 'analysis' not in session:
-        flash('No data yet. Please upload a file first.', 'error')
+        flash('No data available. Please upload a file first.', 'info')
         return redirect(url_for('upload'))
 
     analysis = session['analysis']
@@ -216,9 +241,8 @@ def chart_to_base64(filename):
     return f'data:image/png;base64,{data}'
 
 @app.route('/download-pdf')
+@require_login
 def download_pdf():
-    if not is_session_valid():
-        return redirect(url_for('login'))
     if 'analysis' not in session:
         flash('No data available. Please upload a file first.', 'error')
         return redirect(url_for('upload'))
@@ -347,6 +371,14 @@ def download_pdf():
     except Exception as e:
         flash(f'Error generating PDF: {str(e)}. Please try again.', 'error')
         return redirect(url_for('dashboard'))
+
+@app.route('/test-auth')
+def test_auth():
+    """Test route to verify authentication is working"""
+    if is_session_valid():
+        return f"✅ Authentication working! Logged in as: {session.get('username')}"
+    else:
+        return "❌ Not authenticated - you should be redirected to login"
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

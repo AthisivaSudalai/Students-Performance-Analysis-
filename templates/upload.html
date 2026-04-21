@@ -24,6 +24,7 @@
             height: 56px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
         }
         .navbar .brand {
             font-size: 1.15rem;
@@ -31,6 +32,31 @@
             color: #3a5bd9;
             text-decoration: none;
             letter-spacing: -0.3px;
+        }
+        .navbar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .navbar .user-info .username {
+            font-weight: 600;
+            color: #3a5bd9;
+        }
+        .navbar .logout-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .navbar .logout-btn:hover {
+            background: #d32f2f;
         }
 
         /* ── Page body ── */
@@ -292,8 +318,12 @@
 </head>
 <body>
 
-    <nav class="navbar"     >
-        <a href="#" class="brand" >EduMetrics</a>
+    <nav class="navbar">
+        <a href="#" class="brand">EduMetrics</a>
+        <div class="user-info">
+            <span>Welcome, <span class="username">{{ username }}</span></span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        </div>
     </nav>
 
     <!-- ── Page ── -->
@@ -303,6 +333,9 @@
         <div class="page-heading">
             <h1>Upload Student Data</h1>
             <p>Securely import academic performance records into the EduMetrics archival system. Ensure your file adheres to the schema guidelines below for accurate curricular analysis.</p>
+            <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 6px; padding: 12px; margin-top: 16px; font-size: 0.9rem;">
+                <strong>🔒 Secure Access:</strong> You are logged in as <strong>{{ username }}</strong>. All file uploads are protected and require authentication.
+            </div>
         </div>
 
         <!-- Flash messages -->
